@@ -16,20 +16,13 @@ GetValueRequest <- function(variable, var_type) {
 }
 
 # returns json then a then_do
-ExecuteRequest <- function(size, capture_output) {
-
-    code <- readLines(con = file("/dev/stdin", raw = TRUE), size)
-    #code <- readChar(con = "stdin", size)
-    is.null(code)
-    log(nchar(code))
-
+ExecuteRequest <- function(body, capture_output) {
     if (capture_output) {
-        texts <- eval_capture_output()
+        texts <- eval_capture_output(body)
         # TODO get the sizes of stdout
     } else {
-        eval_no_capture(code)
+        eval_no_capture(body)
         json_out <- construct_execute_response(0, 0)
-        log(json_out)
         then_do <- list("nothing")
     }
     return(list(json_out, then_do))
@@ -54,11 +47,14 @@ dispatch_request <- function(json) {
 
 
 test_requests <- function() {
-    dispatch_request(readLines("get_value_request.json"))
-    dispatch_request(readLines("execute_request.json"))
+    python_env <<- new.env()
+    assign("a", "what", envir = python_env)
+    assign("Helllo", "what", envir = python_env)
+    dispatch_request(readLines("../test/get_value_request.json"))
+    dispatch_request(readLines("../test/execute_request.json"))
 }
 
 test_responses <- function() {
-    writeLines(construct_get_value_response(5), "get_value_response.json")
-    writeLines(construct_execute_response(20, 30), "execute_response.json")
+    writeLines(construct_get_value_response(3), "../test/get_value_response.json")
+    writeLines(construct_execute_response(20, 30), "../test/execute_response.json")
 }

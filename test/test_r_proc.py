@@ -42,8 +42,9 @@ def test_get_strings_python():
 
 def test_eval_str():
     with r_proc.RProcess() as proc:
-        out = proc.eval_str("a<-2")
-        print(out)
+        proc.eval_str("a<-'2'")
+        out = proc.get_strings("a")
+        assert out[:] == "2"
 
 def test_readline_timeout():
     r_proc.TIMEOUT = .1
@@ -58,4 +59,4 @@ def test_readline_timeout():
 if __name__ == '__main__':
     # test_get_strings()
     test_get_strings_python()
-    # test_eval_str()
+    test_eval_str()

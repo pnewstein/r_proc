@@ -28,7 +28,7 @@ class ExecuteRequest(BaseModel):
     The next text will be R code to execute
     """
     type: Literal["ExecuteRequest"] = "ExecuteRequest"
-    size: int
+    body: str
     "the size of the string"
     capture_output: bool
     "whether to capture stdout and stderr"

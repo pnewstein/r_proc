@@ -2,20 +2,20 @@
 Code that gives a python interface for a R process
 """
 
-from typing import IO, Optional
+from typing import IO, Optional, Union, Type
+
+import json
 from contextlib import AbstractContextManager
 from subprocess import Popen, PIPE, TimeoutExpired, SubprocessError
 from pathlib import Path
-from enum import Enum
 import threading
-import sys
 
 import numpy as np
 from numpy.typing import NDArray
 
 from .communicate import (
     VarType, GetValueRequest, GetValueResponse,
-    ExecuteRequest, ExecuteResponse
+    ExecuteRequest, ExecuteResponse, ResponcesAlias, parse_response
 )
 
 SERVER_SCRIPT_PATH = Path(__file__).parent / "server.R"
@@ -26,8 +26,7 @@ def string_to_np_array(in_bytes: bytes) -> NDArray[str]:
     Converts a R string vector null terminated strings into a numpy array
     """
     out_array = np.array([s.decode("utf-8") for s in in_bytes.split(b"\x00")])
-    # split adds the last null terminated string
-    return out_array[1:-1]
+    return out_array
 
 class RProcess(AbstractContextManager):
     """
@@ -99,7 +98,18 @@ class RProcess(AbstractContextManager):
             # let the thread know
             out_ba.extend(b"killed")
             raise TimeoutExpired("readline", timeout)
-        return bytes(out_ba)
+        return bytes(out_ba).strip(b"\x00")
+
+    def _exchange_data(self, request: Union[GetValueRequest, ExecuteRequest]) -> ResponcesAlias:
+        """
+        Exchanges data with R
+        """
+        self.stdin.write(request.json().encode("utf-8"))
+        self.stdin.write(b"\n")
+        self.stdin.flush()
+        responce = self._readline_timeout()
+        return parse_response(json.loads(responce.decode("utf-8")))
+
 
     def eval_str(self, string: str, capture_output=False) -> tuple[str, str]:
         """
@@ -107,58 +117,20 @@ class RProcess(AbstractContextManager):
         """
         if capture_output:
             raise NotImplementedError
-        request = ExecuteRequest(size=len(string), capture_output=capture_output)
-        self.stdin.write(request.json().encode("utf-8"))
-        self.stdin.write(b"\n")
-        self.stdin.flush()
-        self.stdin.write(string.encode("utf-8"))
-        self.stdin.flush()
-        responce = self._readline_timeout()
-        responce_obj: ExecuteResponse = ExecuteResponse.parse_raw(responce)
+        request = ExecuteRequest(body=string, capture_output=capture_output)
+        responce_obj: ExecuteResponse = self._exchange_data(request) # type: ignore
         if capture_output:
             std_out = self.stdout.read(responce_obj.std_out_len)
             std_err = self.stdout.read(responce_obj.std_out_len)
-        return std_out, std_err
+        else:
+            std_out = std_err = b""
+        return std_out.decode(), std_err.decode()
 
     def get_strings(self, var: str) -> NDArray[str]:
         """
         Gets the value attached to an R symbol
         """
         request = GetValueRequest(variable=var, var_type=VarType.str_vec)
-        self.stdin.write(request.json().encode("utf-8"))
-        self.stdin.write(b"\n")
-        self.stdin.flush()
-        responce = self._readline_timeout()
-        responce_obj = GetValueResponse.parse_raw(responce)
-        r_string = self.stdout.read(responce_obj.size)
+        responce_obj: GetValueResponse = self._exchange_data(request) # type: ignore
+        r_string = self.stdout.read(responce_obj.size).strip(b"\x00")
         return string_to_np_array(r_string)
-
-    # def clean_output(self):
-        # """
-        # Removes any lingering text in stdout
-        # """
-        # # closing statement causes R to print TOKEN
-        # # the std.out is then read until the token to empty the pipe
-        # self.stdin.write(CLOSING_STATEMENT)
-        # self.stdin.flush()
-        # read_until_token(self.stdout)
-
-    # def eval_str(self, code: str) -> str:
-        # """
-        # Uses the R interperter to evaluate a string.
-        # returns the interpreter's responce.
-        # """
-        # self.clean_output()
-        # self.stdin.write(f"{code}\n".encode("utf-8"))
-        # self.stdin.flush()
-        # self.stdin.write(CLOSING_STATEMENT)
-        # self.stdin.flush()
-        # self.stdout.readline()
-        # out = read_until_token(self.stdout)
-        # return out.split(b"> write(\'~END~\', stdout())\n~END~\n>")[0].decode("utf-8")
-
-    # def get_encoded(self, r_var: str) -> str:
-        # """
-        # Gets the content of an R variable
-        # """
-        # return self.eval_str(f"write({r_var}, stdout())")

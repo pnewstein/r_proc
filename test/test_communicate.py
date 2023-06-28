@@ -19,17 +19,16 @@ def test_parse_response():
 
 def test_communitcate_py_to_r():
     os.chdir(PROJECT_ROOT / "test")
-    map(lambda p: p.unlink, Path().glob("*.json"))
     gvr = communicate.GetValueRequest(variable="a", var_type=VarType.double_vec, type="GetValueRequest")
     Path("get_value_request.json").write_text(gvr.json(), "utf-8")
-    er = communicate.ExecuteRequest(size=5, capture_output=False, type="ExecuteRequest")
+    er = communicate.ExecuteRequest(body="Helllo", capture_output=False, type="ExecuteRequest")
     Path("execute_request.json").write_text(er.json(), "utf-8")
 
     r_code = b"""
 source("../r_subproc/communicate.R")
 test_requests()
     """
-    out = run(["R", "--no-save"], check=True, input=r_code)
+    out = run(["R", "--no-save"], cwd=(PROJECT_ROOT / "r_subproc"), check=True, input=r_code)
 
 def test_communitcate_r_to_py():
     os.chdir(PROJECT_ROOT / "test")
@@ -37,12 +36,11 @@ def test_communitcate_r_to_py():
 source("../r_subproc/communicate.R")
 test_responses()
     """
-    map(lambda p: p.unlink, Path().glob("*.json"))
-    out = run(["R", "--no-save"], check=True, input=r_code)
+    out = run(["R", "--no-save"], cwd=(PROJECT_ROOT / "r_subproc"), check=True, input=r_code)
     a = communicate.GetValueResponse.parse_raw(Path("get_value_response.json")
                                                  .read_bytes())
     b = communicate.ExecuteResponse.parse_raw(Path("execute_response.json")
                                                 .read_bytes())
 
 if __name__ == '__main__':
-    test_communitcate_r_to_py()
+    test_communitcate_py_to_r()
