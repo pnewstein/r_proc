@@ -1,6 +1,6 @@
 string_vector_bytes <- function(strings) {
     char_len_array <- nchar(strings)
-    return(length(char_len_array) + sum(char_len_array) + 1)
+    return(length(char_len_array) + sum(char_len_array))
 }
 
 

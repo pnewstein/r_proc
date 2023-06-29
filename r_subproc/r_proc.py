@@ -19,7 +19,7 @@ from .communicate import (
 )
 
 SERVER_SCRIPT_PATH = Path(__file__).parent / "server.R"
-TIMEOUT = .2
+TIMEOUT = 5
 
 def string_to_np_array(in_bytes: bytes) -> NDArray[str]:
     """
@@ -86,7 +86,8 @@ class RProcess(AbstractContextManager):
                     return
                 if self.proc.poll() is not None:
                     print("dead processes")
-                    
+            # read the string terminator
+            assert self.stdout.read(1) == b"\x00"
             out_ba.extend(line) #self.stdout.readline())
 
         if timeout is None:

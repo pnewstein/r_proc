@@ -43,7 +43,6 @@ serve <- function() {
     out <- dispatch_request(input)
     log(out[[1]])
     send_string(sprintf("%s\n", out[[1]]))
-    flush(stdout)
     then_do <- out[[2]]
     log(paste(then_do[[1]]))
     do.call(then_do[[1]], args = then_do[-1], envir = python_env)

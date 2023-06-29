@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 import os
 
-from r_subproc import communicate
+from r_subproc import communicate, r_proc
 VarType = communicate.VarType
 
 PROJECT_ROOT = Path(__file__).parents[1]
@@ -16,6 +16,19 @@ def test_json():
 def test_parse_response():
     responce = communicate.parse_response({"type": "GetValueResponse", "size": 5})
     assert (responce == communicate.GetValueResponse(type="GetValueResponse", size=5))
+
+def test_r_write():
+    """
+    make sure there are no string terminator in writes
+    """
+    with r_proc.RProcess(PROJECT_ROOT / "test/r_write.R") as proc:
+        responce = proc._readline_timeout(.2)
+        out = proc.stdout.read(54)
+        terminator = proc.stdout.read(1)
+        assert (out[0] != b"\x00")
+
+
+
 
 def test_communitcate_py_to_r():
     os.chdir(PROJECT_ROOT / "test")
@@ -43,4 +56,4 @@ test_responses()
                                                 .read_bytes())
 
 if __name__ == '__main__':
-    test_communitcate_py_to_r()
+    test_r_write()
