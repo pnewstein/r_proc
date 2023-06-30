@@ -1,25 +1,19 @@
 from pathlib import Path
+import subprocess
 
 from pytest import raises
-import subprocess
+import numpy as np
 
 from r_subproc import r_proc
 
 HERE = Path(__file__).parent
 
-# def test_string_to_array():
-    # path = HERE / "string.bin"
-    # with RSession() as r:
-        # r.eval_str(f'writeBin(c("sdf", "dff", "lafsdfjslksldlsdv"), "{path}")')
-    # string = (HERE / "string.bin").read_bytes()
-    # assert np.all(r_proc.string_to_np_array(string) == ("sdf", "dff", "lafsdfjslksldlsdv"))
 
-# def test_double_to_array():
-    # path = HERE / "double.bin"
-    # with RSession() as r:
-        # r.eval_str(f'writeBin(c(1.01, 2.02, 3.03), "{path}")')
-    # string = (HERE / "double.bin").read_bytes()
-    # assert np.all(r_proc.double_to_np_array(string) == [1.01, 2.02, 3.03])
+def test_double_to_array():
+    string = b'\x9a\x99\x99\x99\x99\x99\xf1?\x9a\x99\x99\x99\x99\x99\x01@'
+    out = r_proc.double_to_np_array(string)
+    assert np.all(r_proc.double_to_np_array(string) == [1.1, 2.2])
+
 
 def test_init():
     with r_proc.RProcess() as proc:
@@ -47,7 +41,6 @@ def test_eval_str():
         assert out[:] == "2"
 
 def test_readline_timeout():
-    r_proc.TIMEOUT = .1
     with r_proc.RProcess(HERE / "read_timeout_good.R") as proc:
         bytes = proc._readline_timeout(.2)
         # assert bytes == b'test\n'
@@ -57,9 +50,23 @@ def test_readline_timeout():
             bytes = proc._readline_timeout(.1)
 
 
+def test_get_doubles():
+    with r_proc.RProcess() as proc:
+        proc.eval_str("a <- c(1.1, 2.2, 3.03)")
+        out = proc.get_doubles("a")
+        assert np.all(out == np.array([1.1, 2.2, 3.03]))
+
+def test_get_ints():
+    with r_proc.RProcess() as proc:
+        proc.eval_str("a <- c(as.integer(1), as.integer(999))")
+        out = proc.get_ints("a")
+        assert np.all(out == np.array([1, 999]))
+
 if __name__ == '__main__':
+    # test_get_strings()
+    # test_init()
+    # test_get_strings_python()
+    # test_eval_str()
+    # test_double_to_array()
     test_get_strings()
-    test_init()
-    test_get_strings_python()
-    test_eval_str()
-    test_readline_timeout()
+    test_get_ints()

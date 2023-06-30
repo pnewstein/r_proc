@@ -14,6 +14,8 @@ if TYPE_CHECKING:
         @abstractclassmethod
         def parse_raw(cls: Type[T], json: bytes) -> T:
             pass
+        def json(self) -> str:
+            pass
 
 
 class VarType(Enum):
@@ -22,6 +24,7 @@ class VarType(Enum):
     """
     double_vec = "double_vec"
     str_vec = "str_vec"
+    int_vec = "int_vec"
 
 class ExecuteRequest(BaseModel):
     """

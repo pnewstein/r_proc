@@ -28,6 +28,18 @@ def string_to_np_array(in_bytes: bytes) -> NDArray[str]:
     out_array = np.array([s.decode("utf-8") for s in in_bytes.split(b"\x00")])
     return out_array
 
+def double_to_np_array(in_bytes: bytes) -> NDArray[np.float64]:
+    """
+    Converts a R double vector into a numpy array
+    """
+    return np.frombuffer(in_bytes, np.float64)
+
+def int_to_np_array(in_bytes: bytes) -> NDArray[np.int32]:
+    """
+    Converts a R double vector into a numpy array
+    """
+    return np.frombuffer(in_bytes, np.int32)
+
 class RProcess(AbstractContextManager):
     """
     A session with the R interpreter
@@ -105,7 +117,8 @@ class RProcess(AbstractContextManager):
         """
         Exchanges data with R
         """
-        self.stdin.write(request.json().encode("utf-8"))
+        request_bytes = request.json().encode("utf-8")
+        self.stdin.write(request_bytes)
         self.stdin.write(b"\n")
         self.stdin.flush()
         responce = self._readline_timeout()
@@ -129,9 +142,28 @@ class RProcess(AbstractContextManager):
 
     def get_strings(self, var: str) -> NDArray[str]:
         """
-        Gets the value attached to an R symbol
+        Gets the list of string attached to an R symbol
         """
         request = GetValueRequest(variable=var, var_type=VarType.str_vec)
         responce_obj: GetValueResponse = self._exchange_data(request) # type: ignore
         r_string = self.stdout.read(responce_obj.size).strip(b"\x00")
         return string_to_np_array(r_string)
+
+    def get_doubles(self, var: str) -> NDArray[np.float64]:
+        """
+        gets the list of doubles attached to an R symbol
+        """
+        request = GetValueRequest(variable=var, var_type=VarType.double_vec)
+        responce_obj: GetValueResponse = self._exchange_data(request) # type: ignore
+        r_double = self.stdout.read(responce_obj.size)
+        return double_to_np_array(r_double)
+
+    def get_ints(self, var: str) -> NDArray[np.int32]:
+        """
+        gets the list of doubles attached to an R symbol
+        """
+        request = GetValueRequest(variable=var, var_type=VarType.int_vec)
+        responce_obj: GetValueResponse = self._exchange_data(request) # type: ignore
+        r_int = self.stdout.read(responce_obj.size)
+        return int_to_np_array(r_int)
+

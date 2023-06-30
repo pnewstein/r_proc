@@ -9,6 +9,11 @@ double_vector_bytes <- function(doubles) {
     return(length(doubles) * 8)
 }
 
+
+int_vec_bytes <- function(ints) {
+    return(length(ints) * 4)
+}
+
 eval_capture_output <- function(code) {
     return(stdout, stderr)
 }

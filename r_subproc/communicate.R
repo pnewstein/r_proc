@@ -11,6 +11,9 @@ GetValueRequest <- function(variable, var_type) {
     } else if (var_type == "double_vec") {
         size <- double_vector_bytes(value)
         then_do <- list("send_vector_bytes", value)
+    } else if (var_type == "int_vec") {
+        size <- int_vec_bytes(value)
+        then_do <- list("send_vector_bytes", value)
     }
     return(list(construct_get_value_response(size), then_do))
 }
