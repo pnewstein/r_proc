@@ -19,6 +19,19 @@ drill_dgcmat <- function(dgcmat) {
 }
 
 
+drill_df <- function(df) {
+    get_types <- function(col_name) return(typeof(df[[col_name]]))
+    columns <- colnames(df)
+    types <- sapply(columns, get_types)
+    assign("types", types, envir = python_env)
+    assign("columns", columns, envir = python_env)
+    for (i in seq_along(columns)) {
+        # use python style indexing
+        assign(sprintf("column%d", i - 1), df[[columns[i]]], envir = python_env)
+
+    }
+}
+
 test_dig_out_type <- function(symbol) {
   var <- get(symbol, envir = python_env)
   stopifnot(typeof(var) %in% c("double", "integer", "character"))
@@ -31,12 +44,24 @@ test_fun <- function() {
                          0, 0,  5, 0),
                        byrow = TRUE, nrow = 4, sparse = TRUE)
 
-    python_env <- new.env()
+    python_env <<- new.env()
     drill_dgcmat(test_mat)
     test_dig_out_type("p")
     test_dig_out_type("i")
     test_dig_out_type("x")
     test_dig_out_type("col_names")
     test_dig_out_type("row_names")
+}
+
+test_data_frame = function() {
+    df <- data.frame(a=seq(100), b=as.integer(1), c="wha")
+    python_env <<- new.env()
+    drill_df(df)
+    test_dig_out_type("columns")
+    test_dig_out_type("types")
+    test_dig_out_type("column0")
+    test_dig_out_type("column1")
+    test_dig_out_type("column2")
+
 }
 #a <- readRDS("dgc.rds")

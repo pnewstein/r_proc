@@ -63,6 +63,5 @@ test_eval_str <- function() {
     out <- dispatch_request('{"type": "ExecuteRequest", "size": 5, "capture_output": false}')
     print(out)
     get("a", envir = python_env)
-
 }
 serve()

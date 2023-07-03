@@ -2,7 +2,7 @@
 Code that gives a python interface for a R process
 """
 
-from typing import IO, Optional, Union, Type
+from typing import IO, Optional, Union, Type, Any
 
 import json
 from contextlib import AbstractContextManager
@@ -103,16 +103,13 @@ class RProcess(AbstractContextManager):
             out_ba.extend(line) #self.stdout.readline())
             # read the string terminator
             assert self.stdout.read(1) == b"\x00"
-            print("done!")
 
         if timeout is None:
             timeout = TIMEOUT
         read_thread = threading.Thread(target=read_into_stream, args=[out_ba])
         read_thread.start()
         read_thread.join(timeout=timeout)
-        print("a", bytes(out_ba))
         if read_thread.is_alive():
-            print(bytes(out_ba))
             # let the thread know
             out_ba.extend(b"killed")
             raise TimeoutExpired("readline", timeout)
@@ -211,3 +208,23 @@ class RProcess(AbstractContextManager):
             out.index = row_names
         return out
 
+    def get_df(self, var: str, capture_output=False) -> pd.DataFrame:
+        """
+        Gets a data_frame from R
+        """
+        rstring = f"drill_df({var})"
+        self.eval_str(rstring)
+        columns = self.get_strings("columns")
+        types = self.get_strings("types")
+        data_list: list[pd.Series] = []
+        for i, (column_name, column_type) in enumerate(zip(columns, types)):
+            if column_type == "character":
+                data = self.get_strings(f"column{i}")
+            elif column_type == "integer":
+                data = self.get_ints(f"column{i}")
+            elif column_type == "double":
+                data = self.get_doubles(f"column{i}")
+            else:
+                assert False
+            data_list.append(pd.Series(name=column_name, data=data))
+        return pd.DataFrame(data_list).T

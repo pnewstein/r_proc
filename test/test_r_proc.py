@@ -3,6 +3,7 @@ import subprocess
 
 from pytest import raises
 import numpy as np
+import pandas as pd
 
 from r_subproc import r_proc
 from r_subproc.communicate import VarType
@@ -75,7 +76,25 @@ def test_mat():
     with r_proc.RProcess() as proc:
         proc.eval_str(make_matrix)
         matrix = proc.get_matrix("test_mat", VarType.double_vec)
-        print(matrix)
+        assert np.all(matrix.to_numpy() == np.array([
+            [0, 0,  0, 2,],
+            [6, 0, -1, 5,],
+            [0, 4,  3, 0,],
+            [0, 0,  5, 0,],
+        ]))
+
+def test_df():
+    with r_proc.RProcess() as proc:
+        proc.eval_str('df <- data.frame(a=seq(100), b=as.integer(1), c="wha")')
+        df = proc.get_df("df")
+        good_df = pd.DataFrame({
+            "a": np.arange(1, 101),
+            "b": np.zeros(100) + 1,
+            "c": ["wha"] * 100})
+        print(df.columns == good_df.columns)
+        print(df.index) # == 
+        print(good_df.index)
+        assert (np.all(df == good_df))
 
 
 if __name__ == '__main__':
@@ -86,4 +105,4 @@ if __name__ == '__main__':
     # test_double_to_array()
     # test_get_strings()
     # test_get_ints()
-    test_mat()
+    test_df()
