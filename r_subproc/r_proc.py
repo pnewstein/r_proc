@@ -12,6 +12,8 @@ import threading
 
 import numpy as np
 from numpy.typing import NDArray
+import pandas as pd
+from scipy.sparse import csc_matrix
 
 from .communicate import (
     VarType, GetValueRequest, GetValueResponse,
@@ -98,20 +100,23 @@ class RProcess(AbstractContextManager):
                     return
                 if self.proc.poll() is not None:
                     print("dead processes")
+            out_ba.extend(line) #self.stdout.readline())
             # read the string terminator
             assert self.stdout.read(1) == b"\x00"
-            out_ba.extend(line) #self.stdout.readline())
+            print("done!")
 
         if timeout is None:
             timeout = TIMEOUT
         read_thread = threading.Thread(target=read_into_stream, args=[out_ba])
         read_thread.start()
         read_thread.join(timeout=timeout)
+        print("a", bytes(out_ba))
         if read_thread.is_alive():
+            print(bytes(out_ba))
             # let the thread know
             out_ba.extend(b"killed")
             raise TimeoutExpired("readline", timeout)
-        return bytes(out_ba).strip(b"\x00")
+        return bytes(out_ba)
 
     def _exchange_data(self, request: Union[GetValueRequest, ExecuteRequest]) -> ResponcesAlias:
         """
@@ -166,4 +171,43 @@ class RProcess(AbstractContextManager):
         responce_obj: GetValueResponse = self._exchange_data(request) # type: ignore
         r_int = self.stdout.read(responce_obj.size)
         return int_to_np_array(r_int)
+
+    def get_matrix(self, var: str, dtype: VarType, capture_output=False) -> pd.DataFrame:
+        """
+        Gets a sparce matrix from R
+        """
+        # drill vars
+        r_string = f"drill_dgcmat({var})"
+        self.eval_str(r_string)
+        col_names: Optional[np.ndarray] = self.get_strings("col_names")
+        assert col_names is not None
+        if len(col_names) == 1:
+            ncols  = int(col_names[0])
+            col_names = None
+        else:
+            ncols = col_names.size
+        row_names: Optional[np.ndarray] = self.get_strings("row_names")
+        assert row_names is not None
+        if len(row_names) == 1:
+            nrows  = int(row_names[0])
+            row_names = None
+        else:
+            nrows = row_names.size
+        pointers = self.get_ints("p")
+        index = self.get_ints("i")
+        if dtype == dtype.int_vec:
+            data: np.ndarray = self.get_ints("x")
+        elif dtype == dtype.double_vec:
+            data = self.get_doubles("x")
+        elif dtype == dtype.str_vec:
+            raise TypeError("You shouldn't have a sparse array of strings")
+        else:
+            assert False
+        sparse_matrix = csc_matrix((data, index, pointers), (nrows, ncols))
+        out = pd.DataFrame.sparse.from_spmatrix(sparse_matrix)
+        if col_names is not None:
+            out.columns = col_names
+        if row_names is not None:
+            out.index = row_names
+        return out
 

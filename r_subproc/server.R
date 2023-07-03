@@ -1,4 +1,6 @@
 source("communicate.R")
+source("compound_types.R")
+
 
 log <- function(str = "", clear = FALSE) {
     if (clear) {

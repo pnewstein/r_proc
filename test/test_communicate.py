@@ -22,7 +22,12 @@ def test_r_write():
     make sure there are no string terminator in writes
     """
     with r_proc.RProcess(PROJECT_ROOT / "test/r_write.R") as proc:
-        responce = proc._readline_timeout(.2)
+        # reasponce = proc.stdout.read(37)
+        # reasponce = proc.stdout.readline()
+        # reasponce = proc.stdout.read(1)
+        # print(reasponce)
+        # quit()
+        responce = proc._readline_timeout()
         out = proc.stdout.read(54)
         terminator = proc.stdout.read(1)
         assert (out[0] != b"\x00")
