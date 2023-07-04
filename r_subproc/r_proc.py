@@ -106,6 +106,8 @@ class RProcess(AbstractContextManager):
 
         if timeout is None:
             timeout = TIMEOUT
+        if timeout == -1:
+            timeout = None
         read_thread = threading.Thread(target=read_into_stream, args=[out_ba])
         read_thread.start()
         read_thread.join(timeout=timeout)
@@ -115,7 +117,7 @@ class RProcess(AbstractContextManager):
             raise TimeoutExpired("readline", timeout)
         return bytes(out_ba)
 
-    def _exchange_data(self, request: Union[GetValueRequest, ExecuteRequest]) -> ResponcesAlias:
+    def _exchange_data(self, request: Union[GetValueRequest, ExecuteRequest], timeout: Optional[int] = None) -> ResponcesAlias:
         """
         Exchanges data with R
         """
@@ -123,7 +125,7 @@ class RProcess(AbstractContextManager):
         self.stdin.write(request_bytes)
         self.stdin.write(b"\n")
         self.stdin.flush()
-        responce = self._readline_timeout()
+        responce = self._readline_timeout(timeout=timeout)
         return parse_response(json.loads(responce.decode("utf-8")))
 
 
@@ -134,7 +136,7 @@ class RProcess(AbstractContextManager):
         if capture_output:
             raise NotImplementedError
         request = ExecuteRequest(body=string, capture_output=capture_output)
-        responce_obj: ExecuteResponse = self._exchange_data(request) # type: ignore
+        responce_obj: ExecuteResponse = self._exchange_data(request, timeout=-1) # type: ignore
         if capture_output:
             std_out = self.stdout.read(responce_obj.std_out_len)
             std_err = self.stdout.read(responce_obj.std_out_len)

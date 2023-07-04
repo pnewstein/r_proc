@@ -28,7 +28,7 @@ class VarType(Enum):
 
 class ExecuteRequest(BaseModel):
     """
-    The next text will be R code to execute
+    Execute the code in body
     """
     type: Literal["ExecuteRequest"] = "ExecuteRequest"
     body: str
