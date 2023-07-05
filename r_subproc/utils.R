@@ -15,7 +15,7 @@ int_vec_bytes <- function(ints) {
 }
 
 eval_capture_output <- function(code) {
-    return(stdout, stderr)
+    eval(parse(text = code), envir = python_env)
 }
 
 eval_no_capture <- function(code) {

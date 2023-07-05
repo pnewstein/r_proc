@@ -129,17 +129,16 @@ class RProcess(AbstractContextManager):
         return parse_response(json.loads(responce.decode("utf-8")))
 
 
-    def eval_str(self, string: str, capture_output=False) -> tuple[str, str]:
+    def eval_str(self, string: str, show_output=False) -> tuple[str, str]:
         """
         Evalulates the string in R
         """
-        if capture_output:
-            raise NotImplementedError
-        request = ExecuteRequest(body=string, capture_output=capture_output)
+        request = ExecuteRequest(body=string, capture_output=show_output)
         responce_obj: ExecuteResponse = self._exchange_data(request, timeout=-1) # type: ignore
-        if capture_output:
-            std_out = self.stdout.read(responce_obj.std_out_len)
-            std_err = self.stdout.read(responce_obj.std_out_len)
+        if show_output:
+            # std_out = self.stdout.read(responce_obj.std_out_len)
+            # std_err = self.stdout.read(responce_obj.std_out_len)
+            std_out = std_err = b""
         else:
             std_out = std_err = b""
         return std_out.decode(), std_err.decode()
@@ -171,7 +170,7 @@ class RProcess(AbstractContextManager):
         r_int = self.stdout.read(responce_obj.size)
         return int_to_np_array(r_int)
 
-    def get_matrix(self, var: str, dtype: VarType, capture_output=False) -> pd.DataFrame:
+    def get_matrix(self, var: str, dtype: VarType, show_output=False) -> pd.DataFrame:
         """
         Gets a sparce matrix from R
         """
@@ -210,7 +209,7 @@ class RProcess(AbstractContextManager):
             out.index = row_names
         return out
 
-    def get_df(self, var: str, capture_output=False) -> pd.DataFrame:
+    def get_df(self, var: str, show_output=False) -> pd.DataFrame:
         """
         Gets a data_frame from R
         """

@@ -21,7 +21,9 @@ GetValueRequest <- function(variable, var_type) {
 # returns json then a then_do
 ExecuteRequest <- function(body, capture_output) {
     if (capture_output) {
-        texts <- eval_capture_output(body)
+        eval_capture_output(body)
+        json_out <- construct_execute_response(0, 0)
+        then_do <- list("nothing")
         # TODO get the sizes of stdout
     } else {
         eval_no_capture(body)
